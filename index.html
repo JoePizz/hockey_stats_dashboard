@@ -125,24 +125,27 @@
         });
       }, [data, selectedTeams, selectedStrengths, selectedGames, selectedGameTypes, selectedPositions]);
 
+      // Calculate team games from ALL data (before position filter) for accurate GP
+      const teamGamesAll = useMemo(() => {
+        const tgAll = {};
+        data.forEach(row => {
+          const team = (row.Team || '').trim();
+          const game = row.Game;
+          
+          if (!tgAll[team]) {
+            tgAll[team] = new Set();
+          }
+          
+          if (game) {
+            tgAll[team].add(game);
+          }
+        });
+        return tgAll;
+      }, [data]);
+
       // Aggregate player stats
       const playerStats = useMemo(() => {
         const stats = {};
-        
-        // Step 1: Build team → unique games map from FILTERED data
-        const teamGames = {};
-        filteredData.forEach(row => {
-          const team = (row.Team || '').trim();
-          const game = row.Game;
-
-          if (!teamGames[team]) {
-            teamGames[team] = new Set();
-          }
-
-          if (game) {
-            teamGames[team].add(game);
-          }
-        });
         
         // Step 2: Aggregate stats from filtered data only
         filteredData.forEach(row => {
@@ -236,7 +239,7 @@
 
         let result = Object.values(stats).map(player => ({
           ...player,
-          gamesPlayed: teamGames[player.team]?.size || 0
+          gamesPlayed: teamGamesAll[player.team]?.size || 0
         }));
 
         // Calculate totals and percentages (before per-game division)
@@ -244,6 +247,10 @@
           // Scoring tab totals
           p.points = p.goals + p.assists;
           p.totalChances = p.shotChances + p.passChances + p.missPostChances;
+          
+          // Entries tab totals
+          // Total Controlled Entries = Carried Entries + Pass Entries
+          p.totalControlledEntries = p.carriedEntries + p.passEntries;
           
           // Shooting tab totals
           // Total Shot Chances = HD + MD shots only (Action = S or GOAL)
@@ -274,6 +281,7 @@
               missPostChances: player.missPostChances / gp,
               totalChances: player.totalChances / gp,
               controlledEntries: player.controlledEntries / gp,
+              totalControlledEntries: player.totalControlledEntries / gp,
               carriedEntries: player.carriedEntries / gp,
               passEntries: player.passEntries / gp,
               dumps: player.dumps / gp,
@@ -316,7 +324,7 @@
         });
 
         return result;
-      }, [filteredData, sortColumn, sortAsc, metricView]);
+      }, [filteredData, sortColumn, sortAsc, metricView, teamGamesAll]);
 
       const renderTable = (columns) => {
         return React.createElement('div', { className: 'overflow-x-auto' },
@@ -473,7 +481,7 @@
         { key: 'number', label: 'Number', align: 'center', color: 'blue' },
         { key: 'position', label: 'Position', align: 'left' },
         { key: 'gamesPlayed', label: 'GP', align: 'center', color: 'orange' },
-        { key: 'controlledEntries', label: 'Controlled Entries', align: 'center', color: 'green' },
+        { key: 'totalControlledEntries', label: 'Total Controlled Entries', align: 'center', color: 'green' },
         { key: 'carriedEntries', label: 'Carried Entries', align: 'center', color: 'green' },
         { key: 'passEntries', label: 'Pass Entries', align: 'center', color: 'green' },
         { key: 'dumps', label: 'Dumps', align: 'center', color: 'green' }
