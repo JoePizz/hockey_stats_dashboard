@@ -35,7 +35,7 @@
       useEffect(() => {
         const loadData = async () => {
           try {
-            const response = await fetch('Kings vs Marlies - AllGames_Copy.csv');
+            const response = await fetch('Hockey Stats Dashboard - All Games (5).csv');
             if (!response.ok) throw new Error('CSV not found on server');
             const csv = await response.text();
             parseCSV(csv);
